@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>자료 게시판</title>
+<title>seolboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -336,7 +336,7 @@ function setCrumb(parts) {
 function renderList() {
   const content = document.getElementById('content');
   document.getElementById('open-new').style.display = 'none';
-  setCrumb([{ label: '게시판' }]);
+  setCrumb([{ label: 'board' }]);
 
   if (posts.length === 0) {
     content.innerHTML = `
@@ -368,7 +368,7 @@ function renderViewer(post) {
   const content = document.getElementById('content');
   const rel = `${POSTS_DIR}/${encodeURIComponent(post.name)}`;  // GitHub Pages 상대경로
 
-  setCrumb([{ label: '게시판', href: '#' }, { label: post.title }]);
+  setCrumb([{ label: 'board', href: '#' }, { label: post.title }]);
 
   // 새 탭 버튼
   const openNew = document.getElementById('open-new');
