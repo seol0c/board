@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>seolboard</title>
+<title>자료 게시판</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -42,11 +42,6 @@
     gap: 0.75rem;
     margin-bottom: 1rem;
     flex-wrap: wrap;
-  }
-  .topbar h1 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
   }
   .topbar .right {
     display: flex;
@@ -195,31 +190,6 @@
     font-size: 0.8rem;
   }
 
-  /* ── 도움말(마스터용) ── */
-  details.help {
-    margin-top: 1.25rem;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    padding: 0.6rem 1rem;
-    font-size: 0.85rem;
-    color: var(--muted);
-  }
-  details.help summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--ink);
-    list-style: none;
-  }
-  details.help summary::-webkit-details-marker { display: none; }
-  details.help summary::before { content: '▸ '; }
-  details.help[open] summary::before { content: '▾ '; }
-  details.help ul { margin: 0.6rem 0 0.2rem 1.1rem; line-height: 1.8; }
-  details.help code {
-    background: #efe9da;
-    padding: 0.05rem 0.35rem;
-    border-radius: 4px;
-  }
-
   .updated-toast {
     position: fixed;
     left: 50%;
@@ -247,7 +217,6 @@
     .container { padding: 1rem; }
     .viewer-wrap { height: calc(100vh - 150px); }
     .row .meta .badge { display: none; }
-    .topbar h1 { font-size: 1.05rem; }
   }
 </style>
 </head>
