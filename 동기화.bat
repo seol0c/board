@@ -2,8 +2,12 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 echo.
-echo === board 게시판 깃허브 동기화 ===
+echo === board 게시판 동기화 ===
 echo.
+echo [1/2] 깃허브 변경 내려받기...
+git pull
+echo.
+echo [2/2] 내 변경 올리기...
 git add -A
 git commit -m "update %date% %time%"
 git push
