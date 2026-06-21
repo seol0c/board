@@ -258,10 +258,11 @@
 const GITHUB_USER = 'seol0c';      // ← GitHub 아이디
 const GITHUB_REPO = 'board';       // ← 저장소(repo) 이름
 const POSTS_DIR   = 'posts';       // ← 파일을 올리는 폴더 이름
-const POLL_MS     = 120000;        // 자동 확인 간격(ms). 120초 = API 제한 안전
+const POLL_MS     = 30000;         // 자동 확인 간격(ms). posts.json은 횟수 제한 없어 짧게 OK
 // ════════════════════════════════════════════════════════════════════
 
-const API_URL = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${POSTS_DIR}`;
+// 목록은 동기화.bat이 만들어 올리는 posts/posts.json 에서 읽음 (GitHub API 미사용 → 403 없음)
+const LIST_URL = `${POSTS_DIR}/posts.json`;
 const SEEN_KEY = `board_seen::${GITHUB_USER}/${GITHUB_REPO}`;
 
 // 확장자별 처리 방식
@@ -269,7 +270,6 @@ const IMG_EXT = ['png','jpg','jpeg','gif','webp','svg','bmp'];
 const IFRAME_EXT = ['html','htm','pdf','txt'];
 
 let posts = [];          // 현재 게시글 목록
-let etag = null;         // 조건부 요청용(변경 없으면 API 사용량 0)
 let firstLoadDone = false;
 
 // ── localStorage: 본 글 기록 { path: sha } ──
@@ -297,28 +297,23 @@ function extOf(name) {
   return m ? m[1] : '';
 }
 
-// ── GitHub에서 목록 가져오기 (ETag로 사용량 절약) ──
+// ── 목록 가져오기 (posts.json, 같은 사이트 파일이라 횟수 제한 없음) ──
 async function fetchPosts() {
-  const headers = { 'Accept': 'application/vnd.github+json' };
-  if (etag) headers['If-None-Match'] = etag;
-  const res = await fetch(API_URL, { headers, cache: 'no-store' });
-
-  if (res.status === 304) return null;                // 변경 없음
-  if (res.status === 404)  return [];                 // 폴더 아직 없음
+  const res = await fetch(`${LIST_URL}?t=${Date.now()}`, { cache: 'no-store' });
+  if (res.status === 404) return [];                  // posts.json 아직 없음
   if (!res.ok) throw new Error(`목록 불러오기 실패 (${res.status})`);
-
-  etag = res.headers.get('etag') || etag;
-  const items = await res.json();
+  const txt = await res.text();
+  const clean = txt.charCodeAt(0) === 0xFEFF ? txt.slice(1) : txt;   // BOM 제거
+  const items = JSON.parse(clean);
   return items
-    .filter(i => i.type === 'file')
     .map(i => ({
       name: i.name,
-      path: i.path,
-      sha: i.sha,
+      path: `${POSTS_DIR}/${i.name}`,
+      sha: String(i.size),                            // 업데이트 감지: 파일 크기
       ext: extOf(i.name),
       title: toTitle(i.name),
     }))
-    .filter(p => p.ext && p.name[0] !== '.')          // 숨김파일 제외
+    .filter(p => p.ext && p.name[0] !== '.' && p.name.toLowerCase() !== 'posts.json')
     .sort((a, b) => b.name.localeCompare(a.name, 'ko', { numeric: true }));
 }
 
@@ -351,11 +346,7 @@ function renderList() {
   setCrumb([{ label: 'board' }]);
 
   if (posts.length === 0) {
-    content.innerHTML = `
-      <div class="empty">
-        아직 올라온 글이 없습니다.
-        <small><code>${POSTS_DIR}/</code> 폴더에 파일을 올리면 여기에 나타납니다.</small>
-      </div>`;
+    content.innerHTML = `<div class="empty">폴더가 비어있습니다.</div>`;
     return;
   }
 
@@ -446,10 +437,22 @@ function route() {
   else renderList();   // 없는 글이면 목록으로
 }
 
+// ── 새로고침 아이콘: 멈출 때 최소 한 바퀴는 돌고 멈춤 ──
+let spinStart = 0;
+function stopSpin() {
+  const btn = document.getElementById('refresh');
+  if (!btn.classList.contains('loading')) return;
+  const DUR = 800;  // 한 바퀴(0.8s)
+  // 지금 도는 바퀴를 끝까지 채운 뒤 멈춤 → 어중간하게 끊기지 않음
+  const remain = DUR - ((performance.now() - spinStart) % DUR);
+  setTimeout(() => btn.classList.remove('loading'), remain);
+}
+
 // ── 새로고침(수동/자동) ──
 async function refresh(announce) {
   const btn = document.getElementById('refresh');
   btn.classList.add('loading');
+  spinStart = performance.now();
   try {
     const fresh = await fetchPosts();
 
@@ -476,7 +479,7 @@ async function refresh(announce) {
        설정의 <code>GITHUB_USER</code> / <code>GITHUB_REPO</code> 가 맞는지 확인해주세요.</small></div>`;
     console.error(err);
   } finally {
-    btn.classList.remove('loading');
+    stopSpin();
   }
 }
 
