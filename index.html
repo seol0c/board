@@ -65,9 +65,9 @@
     white-space: nowrap;
   }
   .btn:hover { background: #fff; border-color: var(--ink); }
-  .btn .spin { display: inline-block; }
+  .btn .spin { display: inline-block; vertical-align: -2px; transform-origin: 50% 50%; }
   .btn.loading .spin { animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 
   .crumb {
     color: var(--muted);
@@ -163,11 +163,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: auto;
+    overflow: hidden;
     background: #fff;
     padding: 1rem;
+    cursor: zoom-in;
   }
-  .viewer-img img { max-width: 100%; height: auto; display: block; }
+  .viewer-img img {
+    max-width: 100%;
+    max-height: 100%;
+    height: auto;
+    display: block;
+    transform-origin: center center;
+    transition: transform 0.06s linear;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .viewer-img.zoomed { cursor: grab; }
+  .viewer-img.grabbing { cursor: grabbing; }
 
   .empty {
     color: var(--muted);
@@ -227,7 +239,7 @@
     <div class="crumb" id="crumb"></div>
     <div class="right">
       <a class="btn" id="open-new" target="_blank" rel="noopener" style="display:none;">새 탭 ↗</a>
-      <button class="btn" id="refresh"><span class="spin">⟳</span> 새로고침</button>
+      <button class="btn" id="refresh"><svg class="spin" viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> 새로고침</button>
     </div>
   </div>
 
@@ -376,7 +388,8 @@ function renderViewer(post) {
   openNew.style.display = 'inline-flex';
 
   if (IMG_EXT.includes(post.ext)) {
-    content.innerHTML = `<div class="viewer-wrap"><div class="viewer-img"><img src="${rel}" alt="${escapeHtml(post.title)}"></div></div>`;
+    content.innerHTML = `<div class="viewer-wrap"><div class="viewer-img" id="imgpan"><img src="${rel}" alt="${escapeHtml(post.title)}" id="zimg" draggable="false"></div></div>`;
+    setupImageZoom();
   } else {
     content.innerHTML = `<div class="viewer-wrap"><iframe src="${rel}" title="${escapeHtml(post.title)}"></iframe></div>`;
   }
@@ -387,6 +400,41 @@ function renderViewer(post) {
 
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── 이미지 휠 줌 + 드래그 이동 (png 등) ──
+function setupImageZoom() {
+  const pan = document.getElementById('imgpan');
+  const img = document.getElementById('zimg');
+  if (!pan || !img) return;
+  let zoom = 1, px = 0, py = 0, drag = false, sx, sy, spx, spy;
+  const apply = () => {
+    img.style.transform = `translate(${px}px, ${py}px) scale(${zoom})`;
+    pan.classList.toggle('zoomed', zoom > 1);
+  };
+  // 마우스 휠 = 확대/축소 (최소 1배=화면맞춤, 최대 8배)
+  pan.addEventListener('wheel', e => {
+    e.preventDefault();
+    zoom *= e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    zoom = Math.min(8, Math.max(1, zoom));
+    if (zoom === 1) { px = 0; py = 0; }
+    apply();
+  }, { passive: false });
+  // 확대 상태에서 드래그 = 이동
+  img.addEventListener('mousedown', e => {
+    if (zoom <= 1) return;
+    drag = true; sx = e.clientX; sy = e.clientY; spx = px; spy = py;
+    pan.classList.add('grabbing'); e.preventDefault();
+  });
+  pan.addEventListener('mousemove', e => {
+    if (!drag) return;
+    px = spx + (e.clientX - sx); py = spy + (e.clientY - sy); apply();
+  });
+  const endDrag = () => { drag = false; pan.classList.remove('grabbing'); };
+  pan.addEventListener('mouseup', endDrag);
+  pan.addEventListener('mouseleave', endDrag);
+  // 더블클릭 = 원래 크기로
+  img.addEventListener('dblclick', () => { zoom = 1; px = 0; py = 0; apply(); });
 }
 
 // ── 라우팅 ──

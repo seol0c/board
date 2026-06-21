@@ -12,5 +12,4 @@ git commit -m "update %date% %time%"
 git push
 echo.
 echo Done. Open https://seol0c.github.io/board/ after 1-2 min.
-echo.
-pause
+timeout /t 2 >nul
